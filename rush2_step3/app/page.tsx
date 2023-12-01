@@ -4,12 +4,26 @@ import styles from './page.module.css'
 import { TextField } from '@mui/material'
 import DragAndDrop from './_components/dragAndDrop'
 import { useState } from 'react'
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function Home() {
   const [nameOfFile, setNameOfFile] = useState('');
   
   return (
     <main className={styles.main}>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className={styles.description}>
         <p className='font-bold text-md'>
           Rush 2 Web@cademie By Epitech
@@ -59,7 +73,7 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <h2>
+          <h2 className='font-bold text-xl'>
             Étape 1<span>-&gt;</span>
           </h2>
           <p>Création d&apos;une tarball.</p>
@@ -71,7 +85,7 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <h2>
+          <h2 className='font-bold text-xl'>
             Étape 2 <span>-&gt;</span>
           </h2>
           <p>Création de la décompression d&apos;une tarball.</p>
@@ -83,7 +97,7 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <h2>
+          <h2 className='font-bold text-xl'>
             Étape 3 <span>-&gt;</span>
           </h2>
           <p>Ceci est le site que vous visitez actuellement qui consiste à être un site web qui créé et décompresse des tarballs.</p>
@@ -95,7 +109,7 @@ export default function Home() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          <h2>
+          <h2 className='font-bold text-xl'>
             Bonus <span>-&gt;</span>
           </h2>
           <p>
@@ -103,6 +117,11 @@ export default function Home() {
           </p>
         </a>
       </div>
+      <footer>
+          <p className='font-bold'>
+            {new Date().getFullYear()} © Made By Med, Enzo And Judikaël
+          </p>
+      </footer>
     </main>
   )
 }
