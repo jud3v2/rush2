@@ -1,0 +1,8 @@
+.idea/
+.DS_STORE
+./rush2_step3/node_modules
+./rush2_step3/.gitignore
+./rush2_step3/.next
+./rush2_step3/.next-env.d.ts
+./rush2_step3/.eslintrc.json
+./rush2_step3/public/*
