@@ -16,6 +16,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <title>Rush 2 Web@cademie By Epitech</title>
+        <script defer src="https://cdn.tailwindcss.com"></script>
+      </head>
       <body className={inter.className}>{children}</body>
     </html>
   )

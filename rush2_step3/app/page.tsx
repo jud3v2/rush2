@@ -1,92 +1,105 @@
-import Image from 'next/image'
+"use client"
+
 import styles from './page.module.css'
+import { TextField } from '@mui/material'
+import DragAndDrop from './_components/dragAndDrop'
+import { useState } from 'react'
 
 export default function Home() {
+  const [nameOfFile, setNameOfFile] = useState('');
+  
   return (
     <main className={styles.main}>
       <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
+        <p className='font-bold text-md'>
+          Rush 2 Web@cademie By Epitech
         </p>
         <div>
           <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+            href="https://github.com/EpitechWebAcademiePromo2025/W-WEB-024-LIL-1-1-rush2-judikael2.bellance/tree/main"
             target="_blank"
             rel="noopener noreferrer"
+            className='font-bold text-md'
           >
             By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
+            Med, Enzo And Judikaël
           </a>
         </div>
       </div>
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
+      <div className='flex'>
+        <div className='m-2 flex-initial w-100'>
+          <div>
+            <h3 className='font-bold text-2xl my-2'>Utiliser le drag and drop de fichier afin d&apos;envoyer vos fichers </h3>
+          </div>
+          <div>
+            <TextField 
+            fullWidth 
+            id="filename" 
+            className='my-2'
+            value={nameOfFile}
+            variant='outlined' 
+            onChange={e => setNameOfFile(e.target.value)}
+            label="Choisissez le nom de votre tarball"  />
+          </div>
+          <div className='p-1 flex justify-around'>
+            <button className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-1'>Générer la tarball</button>
+            <button className='bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-1'>Télécharger la tarball</button>
+          </div>
+          <div>
+            <DragAndDrop />
+          </div>
+        </div>
       </div>
 
       <div className={styles.grid}>
         <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          href="https://github.com/EpitechWebAcademiePromo2025/W-WEB-024-LIL-1-1-rush2-judikael2.bellance/tree/main/rush2_step1"
           className={styles.card}
           target="_blank"
           rel="noopener noreferrer"
         >
           <h2>
-            Docs <span>-&gt;</span>
+            Étape 1<span>-&gt;</span>
           </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
+          <p>Création d&apos;une tarball.</p>
         </a>
 
         <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          href="https://github.com/EpitechWebAcademiePromo2025/W-WEB-024-LIL-1-1-rush2-judikael2.bellance/tree/main/rush2_step2"
           className={styles.card}
           target="_blank"
           rel="noopener noreferrer"
         >
           <h2>
-            Learn <span>-&gt;</span>
+            Étape 2 <span>-&gt;</span>
           </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
+          <p>Création de la décompression d&apos;une tarball.</p>
         </a>
 
         <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          href="https://github.com/EpitechWebAcademiePromo2025/W-WEB-024-LIL-1-1-rush2-judikael2.bellance/tree/main/rush2_step3"
           className={styles.card}
           target="_blank"
           rel="noopener noreferrer"
         >
           <h2>
-            Templates <span>-&gt;</span>
+            Étape 3 <span>-&gt;</span>
           </h2>
-          <p>Explore starter templates for Next.js.</p>
+          <p>Ceci est le site que vous visitez actuellement qui consiste à être un site web qui créé et décompresse des tarballs.</p>
         </a>
 
         <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
+          href="https://github.com/EpitechWebAcademiePromo2025/W-WEB-024-LIL-1-1-rush2-judikael2.bellance/tree/main/rush2_bonus"
           className={styles.card}
           target="_blank"
           rel="noopener noreferrer"
         >
           <h2>
-            Deploy <span>-&gt;</span>
+            Bonus <span>-&gt;</span>
           </h2>
           <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
+            Amélioration de l&apos;algorithme de compression.
           </p>
         </a>
       </div>
