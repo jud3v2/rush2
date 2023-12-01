@@ -94,5 +94,3 @@ foreach (array_slice($argv, 1) as $archivePath) {
         fwrite(STDERR, "Le fichier '$archivePath' n'existe pas ou ne peut pas être lu.\n");
     }
 }
-
-?>
