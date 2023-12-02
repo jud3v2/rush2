@@ -9,7 +9,7 @@ function askUserChoice() {
     return trim(fgets(STDIN));
 }
 
-function extractTar($filePath) {
+function extractMyTar($filePath) {
     $overwriteAll = false;
     $skipAll = false;
 
@@ -17,91 +17,60 @@ function extractTar($filePath) {
         return logMessage("Erreur : Le fichier $filePath n'existe pas.");
     }
 
-    // Créer un répertoire d'extraction basé sur le nom du fichier
-    $destination = dirname($filePath) . '/' . basename($filePath, '.mytar');
-    if (!is_dir($destination)) {
-        mkdir($destination, 0777, true);
+    $fileContent = file_get_contents($filePath);
+    $filesData = json_decode($fileContent, true);
+
+    if ($filesData === null) {
+        return logMessage("Erreur : Le contenu du fichier $filePath n'est pas un JSON valide.");
     }
 
-    $file = fopen($filePath, 'rb');
+    foreach ($filesData as $fileData) {
+        $fileName = $fileData['name'];
+        $fileRelativePath = $fileData['path'];
+        $fileContent = $fileData['content'];
 
-    while (!feof($file)) {
-        $header = fread($file, 512);
-        if (!$header || strlen($header) < 512) {
-            break;
-        }
+        $fullPath = dirname($filePath) . '/' . $fileRelativePath;
 
-        $fileInfo = unpack("a100name/a8mode/a8uid/a8gid/a12size/a12mtime/a2chksum/a1typeflag/a100linkname/a6magic/a2version/a32uname/a32gname/a8devmajor/a8devminor", $header);
-
-        $name = trim($fileInfo['name']);
-        if (!$name) {
-            break;
-        }
-
-        $fileSize = octdec(trim($fileInfo['size']));
-        $typeFlag = $fileInfo['typeflag'];
-
-        if (file_exists($destination . '/' . $name)) {
+        if (file_exists($fullPath)) {
             if (!$overwriteAll && !$skipAll) {
-                logMessage("Conflit avec le fichier/dossier : " . $name);
+                logMessage("Conflit avec le fichier/dossier : $fullPath");
                 $userChoice = askUserChoice();
 
                 switch ($userChoice) {
                     case 1: // Écraser
                         break;
                     case 2: // Ne pas écraser
-                        fseek($file, ceil($fileSize / 512) * 512, SEEK_CUR);
                         continue 2;
                     case 3: // Écraser pour tous
                         $overwriteAll = true;
                         break;
                     case 4: // Ne pas écraser pour tous
                         $skipAll = true;
-                        fseek($file, ceil($fileSize / 512) * 512, SEEK_CUR);
                         continue 2;
                     case 5: // Arrêter et quitter
-                        fclose($file);
                         return logMessage("Décompression annulée par l'utilisateur.");
                     default:
-                        fclose($file);
                         return logMessage("Choix non valide. Décompression annulée.");
                 }
             } elseif ($skipAll) {
-                fseek($file, ceil($fileSize / 512) * 512, SEEK_CUR);
                 continue;
             }
         }
 
-        $extractPath = $destination . '/' . $name;
-
-        switch ($typeFlag) {
-            case '0': // Fichier normal
-            case '':  // Fichier normal (GNU tar)
-            if ($fileSize > 0) {
-                $fileContent = fread($file, $fileSize);
-                file_put_contents($extractPath, $fileContent);
-            }
-            break;
-            case '5': // Répertoire
-                if (!is_dir($extractPath)) {
-                    mkdir($extractPath, 0777, true);
-                }
-                break;
-            // Ajouter d'autres cas pour différents types de fichiers si nécessaire
+        $directory = dirname($fullPath);
+        if (!is_dir($directory)) {
+            mkdir($directory, 0777, true);
+            logMessage("Répertoire créé : ".basename($directory)."/");
         }
 
-        // Padding pour s'assurer que la taille de l'enregistrement est un multiple de 512 octets
-        $padding = 512 - ($fileSize % 512);
-        if ($padding < 512) {
-            fseek($file, $padding, SEEK_CUR);
-        }
+        file_put_contents($fullPath, $fileContent);
+        logMessage("Fichier extrait : ".basename($fullPath));
     }
 
-    fclose($file);
-    return logMessage("Décompression réussie dans le dossier : $destination");
+    return logMessage("Extraction terminée avec succès.");
 }
 
 fwrite(STDOUT, "Entrez le chemin du fichier .mytar à décompresser : ");
 $filePath = trim(fgets(STDIN));
 
-extractTar($filePath);
+extractMyTar($filePath);
