@@ -4,12 +4,32 @@ import styles from './page.module.css'
 import { TextField } from '@mui/material'
 import DragAndDrop from './_components/dragAndDrop'
 import { useState } from 'react'
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import {useQueryClient, useQuery} from "@tanstack/react-query";
+import axios from 'axios';
 
 export default function Home() {
-  const [nameOfFile, setNameOfFile] = useState('');
-  
+  const [nameOfFile, setNameOfFile] = useState<string>('');
+  const [called, setCalled] = useState<boolean>(false)
+  const queryClient = useQueryClient();
+
+  const try_to_connect_to_api =  async () => {
+    return await axios.get('http://localhost:8000/api/ping')
+        .then(({data}) => {
+          toast("connexion au serveur réussi")
+          return data
+        })
+        .catch((e) => {
+          toast("Une erreur est survenue lors de la connexion au serveur", {
+            type: "error"
+          })
+          return e;
+        })
+  }
+
+  useQuery({queryKey: ["first_connexion"], queryFn: try_to_connect_to_api})
+
   return (
     <main className={styles.main}>
       <ToastContainer
@@ -118,7 +138,7 @@ export default function Home() {
         </a>
       </div>
       <footer>
-          <p className='font-bold'>
+          <p className='font-bold my-2'>
             {new Date().getFullYear()} © Made By Med, Enzo And Judikaël
           </p>
       </footer>
