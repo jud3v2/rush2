@@ -1,5 +1,8 @@
 <?php
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 #[AllowDynamicProperties] class my_tar {
 
     /**
@@ -10,6 +13,7 @@
     {
         $this->arguments = $argv;
         $this->tree = [];
+        $this->authorizedFiles = ['txt', 'csv', 'pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'avi', 'mkv'];
         $this->message = [
             "success" => 0,
             "error" => -1,
@@ -28,14 +32,17 @@
         }
         // parcours tous les arguments en tant que fichiers.
         foreach ($this->getArguments() as $file) {
+            if($file == 'my_tar.php') { // skip my_tar.php
+                continue;
+            }
+
+            echo "Processing file: " . $file . PHP_EOL;
             if(is_dir($file)) {
                 // si c'est un dossier on l'envoie dans une autre fonction qui vas gerer les dossier et les sous-dossier
                 $this->scan_my_dir_rec($file);
-            } elseif(is_file($file)) {
+            } elseif($this->my_own_check_file($file)){
                 // sinon si c'est un fichier et qu'il est différent du script d'éxecution on l'ajoute dans l'arborescence
-                if($file != 'my_tar.php') { // supprime le nom du script car on ne veux pas l'inclure dans notre tree
-                    $this->setTree(realpath($file));
-                }
+                $this->setTree($file);
             }
         }
     }
@@ -48,8 +55,6 @@
     {
         // récupère tous les chemins d'accès au fichier découvert précedemment.
         $files = $this->getTree();
-
-        unset($files[0]); // remove my_tar.php
 
         // création d'un array pour conversion en json.
         $array_files = [];
@@ -65,16 +70,11 @@
 
         // parcours chaque fichier afin de lire son contenue et l'insérer dans le tableau.
         foreach ($files as $file) {
-            // Ignorer les répertoires au cas où
-            if (is_dir($file)) {
-                continue;
-            }
-
             // ajout dans l'array $array_files, opération similaire à un array_push(...)
             $array_files[] = [
                 "name" => basename($file), // nom du fichier
                 "path" => str_replace(getcwd(), './', $file), // récupération du chemin relatif
-                "content" => is_file($file) ? file_get_contents($file) : '' // contenu du fichier
+                "content" => $this->getFileContent($file) // contenu du fichier
             ];
 
         }
@@ -91,27 +91,53 @@
     }
 
     /**
+     * @description Obtient le contenu du fichier en fonction de son type.
+     * @param string $file
+     * @return string
+     */
+    private function getFileContent(string $file): string
+    {
+        $fileExtension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        // Ajouter ici des conditions pour traiter différents types de fichiers
+        if (in_array($fileExtension, ['txt', 'csv', 'pdf'])) {
+            // Utiliser file_get_contents pour les types de fichiers texte et PDF
+            return file_get_contents($file);
+        } elseif (in_array($fileExtension, ['jpg', 'jpeg', 'png', 'gif'])) {
+            // Utiliser une méthode spécifique pour les images
+            return base64_encode(file_get_contents($file)); // Vous pouvez également utiliser des bibliothèques pour convertir l'image en base64
+        } elseif (in_array($fileExtension, ['mp4', 'avi', 'mkv'])) {
+            // Utiliser une méthode spécifique pour les vidéos
+            return base64_encode(file_get_contents($file)); // Vous pouvez également utiliser des bibliothèques pour convertir la vidéo en base64
+        } else {
+            // Ajouter d'autres conditions pour d'autres types de fichiers si nécessaire
+            return ''; // Retourner une chaîne vide pour les types de fichiers non pris en charge
+        }
+    }
+
+    /**
      * @description Fonction récursive qui permet de découvrir les fichiers et sous dossiers.
      * @param $dir
      * @return void
      */
     private function scan_my_dir_rec($dir): void {
-        $scanned_directories = scandir(realpath('./' . $dir));
+        $scanned_directories = scandir($dir);
         $this->remove_point_and_double($scanned_directories);
 
         foreach ($scanned_directories as $file) {
-            $fullPath = realpath('./' . $dir . '/' . $file);
+            $fullPath = $dir . '/' . $file;
 
             if (is_dir($fullPath)) {
-                echo "scanning directory: " . $fullPath . PHP_EOL;
-                $this->scan_my_dir_rec($dir . '/' . $file);
-            } elseif (is_file($fullPath)) {
-                if(!str_contains($fullPath, 'my_tar.php')) {
-                    $this->setTree($fullPath);
-                    echo "adding file to tree: " . $fullPath . PHP_EOL;
-                }
+                $this->scan_my_dir_rec($fullPath);
+            } elseif ($this->my_own_check_file($fullPath)) {
+                $this->setTree($fullPath);
             }
         }
+    }
+
+    private function my_own_check_file(string $file): bool
+    {
+        $fileExtension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        return in_array($fileExtension, $this->authorizedFiles);
     }
 
 
