@@ -6,13 +6,11 @@ import DragAndDrop from './_components/dragAndDrop'
 import { useState } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {useQueryClient, useQuery} from "@tanstack/react-query";
+import {useQuery} from "@tanstack/react-query";
 import axios from 'axios';
 
 export default function Home() {
   const [nameOfFile, setNameOfFile] = useState<string>('');
-  const [called, setCalled] = useState<boolean>(false)
-  const queryClient = useQueryClient();
 
   const try_to_connect_to_api =  async () => {
     return await axios.get('http://localhost:8000/api/ping')
