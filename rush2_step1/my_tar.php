@@ -3,23 +3,36 @@
 #[AllowDynamicProperties] class my_tar {
 
     /**
+     * @description récupère les arguments passé en paramètre.
      * @param $argv
      */
     public function __construct($argv)
     {
         $this->arguments = $argv;
         $this->tree = [];
+        $this->message = [
+            "success" => 0,
+            "error" => -1,
+        ];
     }
 
     /**
+     * @description point d'entré pour découvrir tous les fichiers et sous dossier envoyé en arguments.
      * @return void
      */
     public function start(): void
     {
+        if(count($this->getArguments()) <= 1) {
+            $this->showHelp();
+            exit($this->message['error']);
+        }
+        // parcours tous les arguments en tant que fichiers.
         foreach ($this->getArguments() as $file) {
             if(is_dir($file)) {
+                // si c'est un dossier on l'envoie dans une autre fonction qui vas gerer les dossier et les sous-dossier
                 $this->scan_my_dir_rec($file);
             } elseif(is_file($file)) {
+                // sinon si c'est un fichier et qu'il est différent du script d'éxecution on l'ajoute dans l'arborescence
                 if($file != 'my_tar.php') { // supprime le nom du script car on ne veux pas l'inclure dans notre tree
                     $this->setTree(realpath($file));
                 }
@@ -28,105 +41,57 @@
     }
 
     /**
+     * @description fonction qui nous permet de créé notre tarball personnaliser
      * @return void
      */
     public function makeTarball(): void
     {
-        $tarFile = fopen("output.mytar", 'w');
-
-        if (!$tarFile) {
-            die("Impossible d'ouvrir le fichier tar pour écriture.");
-        }
-
+        // récupère tous les chemins d'accès au fichier découvert précedemment.
         $files = $this->getTree();
 
         unset($files[0]); // remove my_tar.php
 
-        foreach ($files as $file) {
-            $file = realpath($file);
+        // création d'un array pour conversion en json.
+        $array_files = [];
 
-            // Ignorer les répertoires
+        // création de la tarball avec l'option w si il existe déjà on réduit la taille du fichier à 0
+        $tarFile = fopen("output.mytar", 'w');
+
+        // si l'opération échoue on retounrne une erreur
+        if (!$tarFile) {
+            echo "Impossible d'ouvrir le fichier tar pour écriture.";
+            exit($this->message["error"]);
+        }
+
+        // parcours chaque fichier afin de lire son contenue et l'insérer dans le tableau.
+        foreach ($files as $file) {
+            // Ignorer les répertoires au cas où
             if (is_dir($file)) {
                 continue;
             }
 
-            // Lire le contenu du fichier
-            $content = is_file($file) ? file_get_contents($file) : '';
-            $header = $this->makeHeader($file);
+            // ajout dans l'array $array_files, opération similaire à un array_push(...)
+            $array_files[] = [
+                "name" => basename($file), // nom du fichier
+                "path" => str_replace(getcwd(), './', $file), // récupération du chemin relatif
+                "content" => is_file($file) ? file_get_contents($file) : '' // contenu du fichier
+            ];
 
-            // Calculer le checksum
-            $checksum = array_sum(unpack('C*', $header));
-
-            // Ajouter le contenu du fichier après l'en-tête
-            $header .= pack("a8", sprintf("%06o", $checksum));
-
-            // Écrire l'en-tête et le contenu dans le fichier tar
-            fwrite($tarFile, $header . $content);
-
-            // Padding pour s'assurer que la taille de l'enregistrement est un multiple de 512 octets
-            $padding = 512 - (strlen($header . $content) % 512);
-            if ($padding < 512) {
-                fwrite($tarFile, str_repeat("\0", $padding));
-            }
         }
 
+        // écriture des donné dans la tarball et encodage en json pour pouvoir les décoder plus tard.
+        fwrite($tarFile, json_encode($array_files));
+
+        // fermeture du fichier sinon problème !!
         fclose($tarFile);
+
+        // Retour utilisateur afin de l'informer que tous c'est bien passé
         echo "tarball created";
+        exit($this->message['success']);
     }
 
     /**
-     * @param $file
-     * @return string
-     */
-    private function getFileType($file): string
-    {
-        if (is_link($file)) {
-            return '2'; // lien symbolique
-        } elseif (is_dir($file)) {
-            return '5'; // répertoire
-        } elseif (is_file($file)) {
-            return '0'; // fichier ordinaire
-        } else {
-            return '0'; // type par défaut pour les cas non gérés
-        }
-    }
-
-    private function headerFormat(): string
-    {
-        // En-tête du fichier dans le format tar
-        return "a100" .      // Nom du fichier
-            "a8" .        // Permissions
-            "a8" .        // UID
-            "a8" .        // GID
-            "a12" .       // Taille du fichier
-            "a12" .       // Timestamp de modification
-            "a8" .        // Checksum (à remplir plus tard)
-            "a1" .        // Type de fichier
-            "a100" .      // Linkname
-            "a6" .        // Magic
-            "a2";         // Version
-    }
-
-    private function makeHeader($file) {
-        // Obtenir les informations sur le fichier
-        $stat = stat($file);
-
-        return pack($this->headerFormat(),
-            basename($file),               // Nom du fichier
-            is_file($file) ? sprintf("%06o ", fileperms($file)) : '0000000 ', // Permissions
-            sprintf("%06o ", $stat['uid']), // UID
-            sprintf("%06o ", $stat['gid']), // GID
-            sprintf("%011o ", is_file($file) ? $stat['size'] : 0), // Taille du fichier (0 pour les fichiers spéciaux)
-            sprintf("%011o ", $stat['mtime']), // Timestamp de modification
-            '        ',                     // Checksum (à remplir plus tard)
-            $this->getFileType($file),             // Type de fichier
-            is_link($file) ? readlink($file) : '', // Linkname
-            'ustar',                        // Magic
-            '00'                            // Version
-        );
-    }
-
-    /**
+     * @description Fonction récursive qui permet de découvrir les fichiers et sous dossiers.
      * @param $dir
      * @return void
      */
@@ -151,6 +116,7 @@
 
 
     /**
+     * @description permet de retirer par références à un tableau le . et le .. qui correspond au dossier courant et précédent.
      * @param array $directories
      * @return void
      */
@@ -173,6 +139,7 @@
     }
 
     /**
+     * @description retourne l'arborescence des fichiers, dossier et sous-dossiers décourvert
      * @return array
      */
     private function getTree(): array
@@ -181,14 +148,33 @@
     }
 
     /**
+     * @description permet d'assigner un nouveau champs de fichier dans l'arborescence.
      * @param array|string $tree
      */
     private function setTree(array|string $tree): void
     {
         $this->tree[] = $tree;
     }
+
+    private function showHelp() {
+        $str = <<<EOF
+BONJOUR ET BIENVENUE DANS VOTRE OUTILS DE COMPRESSION
+
+Pour une utilisation optimal du script merci de l'utiliser comme suit:
+
+php my_tar.php [dossier1|fichier1] [dossier2|fichier2]
+
+Ce script vous permettras d'optenir une tarball.
+EOF;
+        echo $str;
+    }
 }
 
+// Création d'un objet php avec la class my_tar
 $foo = new my_tar($argv);
+
+// commence à découvrir les fichiers et sous-dossier
 $foo->start();
+
+// Fabrique la tarball.
 $foo->makeTarball();

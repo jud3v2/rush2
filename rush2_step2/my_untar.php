@@ -1,96 +1,107 @@
-#!/usr/bin/env php
 <?php
 
-if ($argc < 2) {
-    fwrite(STDERR, "Usage: my_untar.php [archivefile1] ...\n");
-    exit(1);
+function logMessage($message) {
+    echo $message . PHP_EOL;
 }
 
-$overwrite_all = false;
-$skip_all = false;
-
-function sanitizeFileName($name) {
-    echo "Nettoyage du nom de fichier: $name\n";
-    return preg_replace('/[^\x20-\x7e]/', '', $name);
+function askUserChoice() {
+    fwrite(STDOUT, "Choisissez une option :\n1. Écraser\n2. Ne pas écraser\n3. Écraser pour tous\n4. Ne pas écraser pour tous\n5. Arrêter et quitter\nVotre choix : ");
+    return trim(fgets(STDIN));
 }
 
-function extractArchive($archivePath, &$overwrite_all, &$skip_all) {
-    echo "Ouverture de l'archive: $archivePath\n";
-    $handle = fopen($archivePath, "rb");
-    if (!$handle) {
-        fwrite(STDERR, "Impossible d'ouvrir le fichier: $archivePath\n");
-        return;
+function extractTar($filePath) {
+    $overwriteAll = false;
+    $skipAll = false;
+
+    if (!file_exists($filePath)) {
+        return logMessage("Erreur : Le fichier $filePath n'existe pas.");
     }
 
-    while (!feof($handle)) {
-        $header = fread($handle, 512);
-        if ($header === false || strlen($header) === 0 || trim($header) === str_repeat("\0", 512)) {
-            echo "Fin de l'archive ou en-tête vide détecté.\n";
+    // Créer un répertoire d'extraction basé sur le nom du fichier
+    $destination = dirname($filePath) . '/' . basename($filePath, '.mytar');
+    if (!is_dir($destination)) {
+        mkdir($destination, 0777, true);
+    }
+
+    $file = fopen($filePath, 'rb');
+
+    while (!feof($file)) {
+        $header = fread($file, 512);
+        if (!$header || strlen($header) < 512) {
             break;
         }
 
-        $fileData = unpack("a100name/a8mode/a8uid/a8gid/a12size/a12mtime/a8chksum/a1typeflag/a100linkname/a6magic/a2version/a32uname/a32gname/a8devmajor/a8devminor", $header);
-        if (!$fileData) {
-            fwrite(STDERR, "En-tête illisible ou fichier corrompu.\n");
+        $fileInfo = unpack("a100name/a8mode/a8uid/a8gid/a12size/a12mtime/a2chksum/a1typeflag/a100linkname/a6magic/a2version/a32uname/a32gname/a8devmajor/a8devminor", $header);
+
+        $name = trim($fileInfo['name']);
+        if (!$name) {
             break;
         }
 
-        $fileName = sanitizeFileName(trim($fileData['name']));
-        $fileSize = octdec(trim($fileData['size']));
-        $fileType = $fileData['typeflag'];
+        $fileSize = octdec(trim($fileInfo['size']));
+        $typeFlag = $fileInfo['typeflag'];
 
-        echo "Traitement du fichier: $fileName (taille: $fileSize, type: $fileType)\n";
+        if (file_exists($destination . '/' . $name)) {
+            if (!$overwriteAll && !$skipAll) {
+                logMessage("Conflit avec le fichier/dossier : " . $name);
+                $userChoice = askUserChoice();
 
-        if ($fileType == '5') {
-            if (!is_dir($fileName) && $fileName !== '') {
-                mkdir($fileName, 0777, true);
-                echo "Dossier créé: $fileName\n";
-            }
-        } elseif ($fileType == '0') {
-            if (file_exists($fileName)) {
-                if ($skip_all) {
-                    echo "Le fichier $fileName existe déjà, option 'Ne pas écraser pour tous' activée, fichier ignoré.\n";
-                    continue;
-                } else if (!$overwrite_all) {
-                    echo "Le fichier $fileName existe déjà. Choisissez une option:\n";
-                    echo "1. Écraser\n2. Ne pas écraser\n3. Écraser pour tous\n4. Ne pas écraser pour tous\n5. Arrêter et quitter\n";
-                    $choice = trim(fgets(STDIN));
-
-                    switch ($choice) {
-                        case 1: // Écraser
-                            break;
-                        case 2: // Ne pas écraser
-                            continue 2;
-                        case 3: // Écraser pour tous
-                            $overwrite_all = true;
-                            break;
-                        case 4: // Ne pas écraser pour tous
-                            $skip_all = true;
-                            continue 2;
-                        case 5: // Arrêter et quitter
-                            fclose($handle);
-                            exit;
-                    }
+                switch ($userChoice) {
+                    case 1: // Écraser
+                        break;
+                    case 2: // Ne pas écraser
+                        fseek($file, ceil($fileSize / 512) * 512, SEEK_CUR);
+                        continue 2;
+                    case 3: // Écraser pour tous
+                        $overwriteAll = true;
+                        break;
+                    case 4: // Ne pas écraser pour tous
+                        $skipAll = true;
+                        fseek($file, ceil($fileSize / 512) * 512, SEEK_CUR);
+                        continue 2;
+                    case 5: // Arrêter et quitter
+                        fclose($file);
+                        return logMessage("Décompression annulée par l'utilisateur.");
+                    default:
+                        fclose($file);
+                        return logMessage("Choix non valide. Décompression annulée.");
                 }
+            } elseif ($skipAll) {
+                fseek($file, ceil($fileSize / 512) * 512, SEEK_CUR);
+                continue;
             }
+        }
 
-            if (!$skip_all) {
-                $content = ($fileSize > 0) ? fread($handle, $fileSize) : '';
-                file_put_contents($fileName, $content);
-                echo "Fichier extrait: $fileName\n";
+        $extractPath = $destination . '/' . $name;
+
+        switch ($typeFlag) {
+            case '0': // Fichier normal
+            case '':  // Fichier normal (GNU tar)
+            if ($fileSize > 0) {
+                $fileContent = fread($file, $fileSize);
+                file_put_contents($extractPath, $fileContent);
             }
-            fseek($handle, (512 - ($fileSize % 512)) % 512, SEEK_CUR);
+            break;
+            case '5': // Répertoire
+                if (!is_dir($extractPath)) {
+                    mkdir($extractPath, 0777, true);
+                }
+                break;
+            // Ajouter d'autres cas pour différents types de fichiers si nécessaire
+        }
+
+        // Padding pour s'assurer que la taille de l'enregistrement est un multiple de 512 octets
+        $padding = 512 - ($fileSize % 512);
+        if ($padding < 512) {
+            fseek($file, $padding, SEEK_CUR);
         }
     }
 
-    fclose($handle);
-    echo "Extraction terminée pour: $archivePath\n";
+    fclose($file);
+    return logMessage("Décompression réussie dans le dossier : $destination");
 }
 
-foreach (array_slice($argv, 1) as $archivePath) {
-    if (file_exists($archivePath) && is_readable($archivePath)) {
-        extractArchive($archivePath, $overwrite_all, $skip_all);
-    } else {
-        fwrite(STDERR, "Le fichier '$archivePath' n'existe pas ou ne peut pas être lu.\n");
-    }
-}
+fwrite(STDOUT, "Entrez le chemin du fichier .mytar à décompresser : ");
+$filePath = trim(fgets(STDIN));
+
+extractTar($filePath);
