@@ -38,10 +38,10 @@ ini_set('display_errors', 1);
 
             echo "Processing file: " . $file . PHP_EOL;
             if(is_dir($file)) {
-                // si c'est un dossier on l'envoie dans une autre fonction qui vas gerer les dossier et les sous-dossier
+                // si c'est un dossier on l'envoie dans une autre fonction qui vas gerer les dossiers et les sous-dossiers
                 $this->scan_my_dir_rec($file);
             } elseif($this->my_own_check_file($file)){
-                // sinon si c'est un fichier et qu'il est différent du script d'éxecution on l'ajoute dans l'arborescence
+                // sinon si c'est un fichier on l'ajoute dans l'arborescence
                 $this->setTree($file);
             }
         }
@@ -182,7 +182,8 @@ ini_set('display_errors', 1);
         $this->tree[] = $tree;
     }
 
-    private function showHelp() {
+    private function showHelp(): void
+    {
         $str = <<<EOF
 BONJOUR ET BIENVENUE DANS VOTRE OUTILS DE COMPRESSION
 
