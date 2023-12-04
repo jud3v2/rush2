@@ -32,7 +32,7 @@ export default function DragAndDrop({onClickSend, onClickDownloadTarball, setOnC
                 fd.append(`files[${index}]`, file);
             });
 
-            return await axios.post('http://localhost:8000/api/tar/make', fd, {
+            return await axios.post(process.env.NODE_ENV === "development" ? "http://localhost:8000/api/tar/make" : "http://zuux.fr/api/tar/make", fd, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
