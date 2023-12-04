@@ -14,7 +14,7 @@ export default function Home() {
     const [onClickSend, setOnClickSend] = useState<any>(null);
     const [onClickDownloadTarball, setOnClickDownloadTarball] = useState<any>(null);
     const try_to_connect_to_api = async () => {
-        return await axios.get(process.env.NODE_ENV === "development" ? "http://localhost:8000/api/ping" : "http://zuux.fr/api/ping")
+        return await axios.get(process.env.NODE_ENV === "development" ? "http://localhost:8000/api/ping" : "https://zuux.fr/api/ping")
             .then(({data}) => {
                 toast("ping serveur réussi", {
                     type: 'success'
@@ -31,7 +31,7 @@ export default function Home() {
 
     const downloadFile = async () => {
         try {
-            const response = await axios.get(process.env.NODE_ENV === "development" ? "http://localhost:8000/api/tar/download" : "http://zuux.fr/api/tar/download", {
+            const response = await axios.get(process.env.NODE_ENV === "development" ? "http://localhost:8000/api/tar/make" : "https://zuux.fr/api/tar/download", {
                 responseType: 'blob',
             });
 
